@@ -1,0 +1,85 @@
+import * as shipmentService from "../services/shipmentService.js";
+export const createShipment = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { recipientName, recipientAddress, details, senderName, senderAddress } = req.body;
+        // Additional validation
+        if (!recipientName || !recipientAddress) {
+            return res.status(400).json({ error: 'Recipient name and address are required' });
+        }
+        const shipment = await shipmentService.createShipment(userId, {
+            recipientName,
+            recipientAddress,
+            details,
+            senderName,
+            senderAddress,
+        });
+        res.status(201).json({ shipment });
+    }
+    catch (error) {
+        const message = error?.message || 'Failed to create shipment';
+        if (message.includes('not found') || message.includes('not found')) {
+            return res.status(404).json({ error: message });
+        }
+        return res.status(500).json({ error: message });
+    }
+};
+export const getMyShipments = async (req, res) => {
+    try {
+        const user = req.user;
+        const shipments = user?.isAdmin
+            ? await shipmentService.getAllShipments()
+            : await shipmentService.getShipmentsByUser(user.id);
+        res.json({ shipments });
+    }
+    catch (error) {
+        res.status(500).json({ error: error?.message || 'Failed to fetch shipments' });
+    }
+};
+export const trackByNumber = async (req, res) => {
+    try {
+        const trackingNumberRaw = req.params.trackingNumber;
+        if (!trackingNumberRaw || Array.isArray(trackingNumberRaw)) {
+            return res.status(400).json({ error: "Tracking number is required" });
+        }
+        const trackingNumber = trackingNumberRaw.trim();
+        if (trackingNumber.length < 3) {
+            return res.status(400).json({ error: "Tracking number must be valid" });
+        }
+        const shipment = await shipmentService.getByTrackingNumber(trackingNumber);
+        if (!shipment)
+            return res.status(404).json({ error: "Shipment not found" });
+        res.json({ shipment });
+    }
+    catch (error) {
+        const message = error?.message || 'Failed to track shipment';
+        return res.status(500).json({ error: message });
+    }
+};
+export const updateStatus = async (req, res) => {
+    try {
+        const idRaw = req.params.id;
+        if (!idRaw || Array.isArray(idRaw))
+            return res.status(400).json({ error: "Invalid shipment ID" });
+        const id = idRaw;
+        const { status } = req.body;
+        // Validate status
+        if (!status) {
+            return res.status(400).json({ error: "Status is required" });
+        }
+        const validStatuses = ["PENDING", "IN_TRANSIT", "DELIVERED", "CANCELLED"];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+        }
+        const shipment = await shipmentService.updateStatus(id, status);
+        res.json({ shipment });
+    }
+    catch (error) {
+        const message = error?.message || 'Failed to update shipment status';
+        if (message.includes('not found')) {
+            return res.status(404).json({ error: message });
+        }
+        return res.status(500).json({ error: message });
+    }
+};
+//# sourceMappingURL=shipmentController.js.map
