@@ -3,7 +3,6 @@ import { body, param, validationResult } from "express-validator";
 import * as shipmentController from "../controllers/shipmentController.js";
 import { requireAuth, requireAdmin } from "../middleware/auth.js";
 const router = Router();
-// Validation middleware to handle express-validator errors
 const handleValidationErrors = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
